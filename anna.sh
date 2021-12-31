@@ -31,11 +31,21 @@ NC='\033[0m'
  
  
 header(){
-  printf "    ${LIGHTGREEN}___${NC}        ${LIGHTRED} __  __                __  ${NC}\n"
-  printf "   ${LIGHTGREEN}/   |${NC}       ${LIGHTRED}/ / / /__  ____ ______/ /_ ${NC}\n"
-  printf "  ${LIGHTGREEN}/ /| |${NC}      ${LIGHTRED}/ /_/ / _ \/ __ \`/ ___/ __/${NC}\n"
-  printf " ${LIGHTGREEN}/ ___ |${NC}     ${LIGHTRED}/ __  /  __/ /_/ / /  / /_   ${NC}\n"
-  printf "${LIGHTGREEN}/_/  |_|${NC}    ${LIGHTRED}/_/ /_/\___/\__,_/_/   \__/   ${NC}\n"
+  printf "    ${LIGHTGREEN}
+         ___
+     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗
+     o|* *|o  ║║╔╣╚╝║║║║║║║
+     o|* *|o  ║║╚╣╔╗║╚╝║╩║║
+      \===/   ║╚═╩╝╚╩══╩╩╝║
+       |||    ╚═══════════╝
+       |||
+       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗
+       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║
+    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝
+
+   
+      By : AnnaQitty
+      Github : github.com/annaqitty
 }
  
 #-----
