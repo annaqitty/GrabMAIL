@@ -45,7 +45,7 @@ header(){
 
    
       By : AnnaQitty
-      Github : github.com/annaqitty
+      Github : github.com/annaqitty${NC}
 }
  
 #-----
