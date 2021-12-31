@@ -56,9 +56,9 @@ header
 echo ""
 echo "__________________________________________________________________________________"
 echo ""
-echo "Email Filter"
-echo "Coded By : Ariesta Heart ( ariestahrt )"
-echo "Date     : 22 March 2017"
+echo "GrabMAIL"
+echo "Coded By : Annaqitty"
+echo "Date     : 28 Juli 2010"
 echo "__________________________________________________________________________________"
 echo ""
  
