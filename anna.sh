@@ -1,8 +1,7 @@
 #!/bin/bash
  
-# Email 
-# Coded By Annaqitty
-# Thanks to malhadijr
+# GrabMAIL
+# Coded By AnnaQitty
  
 # text style
  
@@ -31,21 +30,16 @@ NC='\033[0m'
  
  
 header(){
-  printf "    ${LIGHTGREEN}
-         ___
-     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗
-     o|* *|o  ║║╔╣╚╝║║║║║║║
-     o|* *|o  ║║╚╣╔╗║╚╝║╩║║
-      \===/   ║╚═╩╝╚╩══╩╩╝║
-       |||    ╚═══════════╝
-       |||
-       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗
-       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║
-    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝
-
-   
-      By : AnnaQitty
-      Github : github.com/annaqitty${NC}
+  printf "    ${LIGHTGREEN}       ___ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ║║╔╣╚╝║║║║║║║ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ║║╚╣╔╗║╚╝║╩║║ ${NC}\n"
+  printf "    ${LIGHTGREEN}      \===/   ║╚═╩╝╚╩══╩╩╝║ ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ╚═══════════╝ ${NC}\n"
+  printf "    ${LIGHTGREEN}       ||| ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗ ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║ ${NC}\n"
+  printf "    ${LIGHTGREEN}    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝ ${NC}\n"
 }
  
 #-----
@@ -57,8 +51,8 @@ echo ""
 echo "__________________________________________________________________________________"
 echo ""
 echo "GrabMAIL"
-echo "Coded By : Annaqitty"
-echo "Date     : 28 Juli 2010"
+echo "Coded By : AnnaQitty ( chua )"
+echo "Date     : 28 July 2010"
 echo "__________________________________________________________________________________"
 echo ""
  
