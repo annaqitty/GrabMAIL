@@ -229,8 +229,6 @@ country_codes=(
   ["site"]="Filtered_OTHER-site.txt"
 )
 
-)
-
 # Process and save filtered emails
 for code in "${!country_codes[@]}"; do
   output_file="$save/$other_split_path/${country_codes[$code]}"
