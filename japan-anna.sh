@@ -3,67 +3,136 @@
 set -u
 export LC_ALL=C
 
-echo "============================================================"
-echo "          FAST JAPAN EMAIL FAMILY FILTER"
-echo "============================================================"
-echo
+# ============================================================
+# COLORS
+# ============================================================
+
+BOLD='\e[1m'
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAENTA='\033[0;35m'
+
+LIGHTRED='\033[0;91m'
+LIGHTGREEN='\033[0;92m'
+LIGHTCYAN='\033[0;96m'
+
+BACKGREEN='\033[0;42m'
+BACKBLUE='\033[0;44m'
+
+NC='\033[0m'
+
+# ============================================================
+# HEADER
+# ============================================================
+
+header(){
+  printf "    ${LIGHTGREEN}       ___ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ║║╔╣╚╝║║║║║║║ ${NC}\n"
+  printf "    ${LIGHTGREEN}     o|* *|o  ║║╚╣╔╗║╚╝║╩║║ ${NC}\n"
+  printf "    ${LIGHTGREEN}      \===/   ║╚═╩╝╚╩══╩╩╝║ ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ╚═══════════╝ ${NC}\n"
+  printf "    ${LIGHTGREEN}       ||| ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗ ${NC}\n"
+  printf "    ${LIGHTGREEN}       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║ ${NC}\n"
+  printf "    ${LIGHTGREEN}    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝ ${NC}\n"
+}
+
+# ============================================================
+# START
+# ============================================================
+
+clear
+header
+
+echo ""
+echo "__________________________________________________________________________________"
+echo ""
+printf "${LIGHTCYAN}${BOLD}GrabMAIL${NC}\n"
+printf "Coded By : AnnaQitty ( chua )\n"
+printf "Date     : 28 July 2010\n"
+echo "__________________________________________________________________________________"
+echo ""
+
+# ============================================================
+# INPUT
+# ============================================================
 
 read -rp "[+] Input file : " INPUT
 read -rp "[+] Output dir : " OUTPUT
 
 if [[ ! -f "$INPUT" ]]; then
-    echo "[!] Input file not found: $INPUT"
+    printf "${RED}[!] Input file not found: %s${NC}\n" "$INPUT"
     exit 1
 fi
 
 mkdir -p "$OUTPUT"
 
-TMP_DIR="${TMPDIR:-/tmp}/japan_filter_$$"
-mkdir -p "$TMP_DIR"
+# ============================================================
+# TEMP DIRECTORY
+# ============================================================
 
-REMAINING="$TMP_DIR/emails.txt"
+TMP_DIR="${TMPDIR:-/tmp}/grabmail_$$"
 
-cleanup() {
+mkdir -p "$TMP_DIR" || {
+    printf "${RED}[!] Cannot create temporary directory.${NC}\n"
+    exit 1
+}
+
+REMAINING="$TMP_DIR/remaining.txt"
+
+cleanup(){
     rm -rf "$TMP_DIR"
 }
 
 trap cleanup EXIT INT TERM
 
 # ============================================================
-# EMAIL EXTRACTION
-# ============================================================
-
-echo "[+] Extracting valid email addresses..."
-
-awk '
-{
-    line = tolower($0)
-
-    while (match(line, /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/)) {
-        email = substr(line, RSTART, RLENGTH)
-        print email
-        line = substr(line, RSTART + RLENGTH)
-    }
-}
-' "$INPUT" > "$REMAINING"
-
-TOTAL=$(wc -l < "$REMAINING")
-
-echo "[+] Extracted : $TOTAL"
-echo
-
-# ============================================================
-# FAMILY ARRAYS
+# FAMILY DATABASE
+#
+# Add only domains you are authorized to process.
+#
+# Format:
+#
+# family_name=( domain1 domain2 domain3 )
+#
 # ============================================================
 
 microsoft_family=( hotmail live outlook msn windowslive )
 yahoo_family=( yahoo ymail rocketmail )
 google_family=( gmail google googlemail )
 aol_family=( aol )
-apple_family=( mac apple icloud )
-mail_family=( mail gmx )
+apple_family=( icloud mac apple )
 proton_family=( proton protonmail )
 tuta_family=( tuta tutanota )
+gmx_family=( gmx )
+
+# ============================================================
+# USA PROVIDER FAMILIES
+# ============================================================
+
+comcast_family=( comcast xfinity )
+verizon_family=( verizon )
+att_family=( att sbcglobal bellsouth )
+charter_family=( charter spectrum )
+cox_family=( cox )
+frontier_family=( frontier )
+centurylink_family=( centurylink )
+earthlink_family=( earthlink )
+juno_family=( juno )
+netzero_family=( netzero )
+optimum_family=( optimum )
+rcn_family=( rcn )
+wowway_family=( wowway )
+mediacom_family=( mediacom )
+hughesnet_family=( hughesnet )
+
+# ============================================================
+# JAPAN PROVIDER FAMILIES
+# ============================================================
 
 ocn_family=( ocn )
 dti_family=( dti )
@@ -84,6 +153,10 @@ iij_family=( iij )
 gmo_family=( gmo )
 rakuten_family=( rakuten )
 
+# ============================================================
+# JAPAN CARRIER FAMILIES
+# ============================================================
+
 docomo_family=( docomo )
 au_family=( au ezweb )
 softbank_family=( softbank i-softbank )
@@ -92,50 +165,107 @@ uq_family=( uq )
 linemo_family=( linemo )
 mineo_family=( mineo )
 
-sakura_family=( sakura )
-xserver_family=( xserver )
-conoha_family=( conoha )
-kagoya_family=( kagoya )
-webarena_family=( webarena )
-cpi_family=( cpi )
+# ============================================================
+# HELPER
+# ============================================================
+
+build_regex(){
+
+    local RESULT=""
+    local ITEM
+    local ESCAPED
+
+    for ITEM in "$@"; do
+
+        [[ -z "$ITEM" ]] && continue
+
+        ESCAPED=$(printf '%s' "$ITEM" |
+            sed 's/[][\\.^$*+?(){}|]/\\&/g')
+
+        if [[ -n "$RESULT" ]]; then
+            RESULT="${RESULT}|"
+        fi
+
+        RESULT="${RESULT}${ESCAPED}"
+
+    done
+
+    printf '%s' "$RESULT"
+}
+
+# ============================================================
+# EMAIL EXTRACTION
+# ============================================================
+
+printf "${BLUE}[+] Extracting email addresses...${NC}\n"
+
+awk '
+{
+    line = tolower($0)
+
+    while (
+        match(
+            line,
+            /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/
+        )
+    ) {
+
+        email = substr(
+            line,
+            RSTART,
+            RLENGTH
+        )
+
+        print email
+
+        line = substr(
+            line,
+            RSTART + RLENGTH
+        )
+    }
+}
+' "$INPUT" > "$REMAINING"
+
+TOTAL=$(wc -l < "$REMAINING")
+
+printf "${GREEN}[+] Extracted : %s${NC}\n" "$TOTAL"
+echo ""
 
 # ============================================================
 # FAMILY FILTER
 # ============================================================
 
-filter_family() {
+filter_family(){
 
     local NAME="$1"
     shift
 
-    local REGEX=""
-    local WORD
+    local REGEX
     local MATCH
     local NEXT
     local COUNT
 
-    for WORD in "$@"; do
-
-        [[ -z "$WORD" ]] && continue
-
-        if [[ -n "$REGEX" ]]; then
-            REGEX+="|"
-        fi
-
-        REGEX+="$WORD"
-    done
+    REGEX=$(build_regex "$@")
 
     [[ -z "$REGEX" ]] && return
 
-    MATCH="$TMP_DIR/${NAME}.match"
-    NEXT="$TMP_DIR/${NAME}.next"
+    MATCH="$TMP_DIR/match.txt"
+    NEXT="$TMP_DIR/next.txt"
 
     awk -v re="$REGEX" '
     {
-        n = split($0, parts, "@")
+        p = index($0, "@")
 
-        if (n == 2 && parts[2] ~ re) {
-            print $0
+        if (p > 0) {
+
+            domain = substr(
+                $0,
+                p + 1
+            )
+
+            if (domain ~ re) {
+                print $0
+            }
         }
     }
     ' "$REMAINING" > "$MATCH"
@@ -149,40 +279,93 @@ filter_family() {
 
         awk -v re="$REGEX" '
         {
-            n = split($0, parts, "@")
+            p = index($0, "@")
 
-            if (!(n == 2 && parts[2] ~ re)) {
-                print $0
+            if (p > 0) {
+
+                domain = substr(
+                    $0,
+                    p + 1
+                )
+
+                if (!(domain ~ re)) {
+                    print $0
+                }
             }
         }
         ' "$REMAINING" > "$NEXT"
 
         mv "$NEXT" "$REMAINING"
 
-        echo "[OK] $NAME -> $COUNT"
+        printf "${GREEN}[OK] %-35s %s${NC}\n" \
+            "$NAME" "$COUNT"
 
     else
+
         rm -f "$MATCH"
+
     fi
 }
 
 # ============================================================
-# PROCESS FAMILIES
+# PROCESS GLOBAL FAMILIES
 # ============================================================
 
-echo "============================================================"
-echo "Processing families..."
-echo "============================================================"
-echo
+filter_family \
+    "Microsoft_Family" \
+    "${microsoft_family[@]}"
 
-filter_family "Microsoft_Family_Japan" "${microsoft_family[@]}"
-filter_family "Yahoo_Family_Japan" "${yahoo_family[@]}"
-filter_family "Google_Family_Japan" "${google_family[@]}"
-filter_family "AOL_Family_Japan" "${aol_family[@]}"
-filter_family "Apple_Family_Japan" "${apple_family[@]}"
-filter_family "Mail_Family_Japan" "${mail_family[@]}"
-filter_family "Proton_Family_Japan" "${proton_family[@]}"
-filter_family "Tuta_Family_Japan" "${tuta_family[@]}"
+filter_family \
+    "Yahoo_Family" \
+    "${yahoo_family[@]}"
+
+filter_family \
+    "Google_Family" \
+    "${google_family[@]}"
+
+filter_family \
+    "AOL_Family" \
+    "${aol_family[@]}"
+
+filter_family \
+    "Apple_Family" \
+    "${apple_family[@]}"
+
+filter_family \
+    "Proton_Family" \
+    "${proton_family[@]}"
+
+filter_family \
+    "Tuta_Family" \
+    "${tuta_family[@]}"
+
+filter_family \
+    "GMX_Family" \
+    "${gmx_family[@]}"
+
+# ============================================================
+# PROCESS USA FAMILIES
+# ============================================================
+
+filter_family "Comcast_Family_USA" "${comcast_family[@]}"
+filter_family "Verizon_Family_USA" "${verizon_family[@]}"
+filter_family "ATT_Family_USA" "${att_family[@]}"
+filter_family "Charter_Family_USA" "${charter_family[@]}"
+filter_family "Cox_Family_USA" "${cox_family[@]}"
+filter_family "Frontier_Family_USA" "${frontier_family[@]}"
+filter_family "CenturyLink_Family_USA" "${centurylink_family[@]}"
+filter_family "EarthLink_Family_USA" "${earthlink_family[@]}"
+filter_family "Juno_Family_USA" "${juno_family[@]}"
+filter_family "NetZero_Family_USA" "${netzero_family[@]}"
+filter_family "Optimum_Family_USA" "${optimum_family[@]}"
+filter_family "RCN_Family_USA" "${rcn_family[@]}"
+filter_family "WOWWay_Family_USA" "${wowway_family[@]}"
+filter_family "Mediacom_Family_USA" "${mediacom_family[@]}"
+filter_family "HughesNet_Family_USA" "${hughesnet_family[@]}"
+
+# ============================================================
+# PROCESS JAPAN FAMILIES
+# ============================================================
 
 filter_family "OCN_Family_Japan" "${ocn_family[@]}"
 filter_family "DTI_Family_Japan" "${dti_family[@]}"
@@ -203,6 +386,10 @@ filter_family "IIJ_Family_Japan" "${iij_family[@]}"
 filter_family "GMO_Family_Japan" "${gmo_family[@]}"
 filter_family "Rakuten_Family_Japan" "${rakuten_family[@]}"
 
+# ============================================================
+# PROCESS JAPAN CARRIERS
+# ============================================================
+
 filter_family "Docomo_Family_Japan" "${docomo_family[@]}"
 filter_family "AU_Family_Japan" "${au_family[@]}"
 filter_family "SoftBank_Family_Japan" "${softbank_family[@]}"
@@ -211,13 +398,6 @@ filter_family "UQ_Family_Japan" "${uq_family[@]}"
 filter_family "LINEMO_Family_Japan" "${linemo_family[@]}"
 filter_family "Mineo_Family_Japan" "${mineo_family[@]}"
 
-filter_family "Sakura_Family_Japan" "${sakura_family[@]}"
-filter_family "XServer_Family_Japan" "${xserver_family[@]}"
-filter_family "ConoHa_Family_Japan" "${conoha_family[@]}"
-filter_family "Kagoya_Family_Japan" "${kagoya_family[@]}"
-filter_family "WebArena_Family_Japan" "${webarena_family[@]}"
-filter_family "CPI_Family_Japan" "${cpi_family[@]}"
-
 # ============================================================
 # OTHER
 # ============================================================
@@ -225,15 +405,29 @@ filter_family "CPI_Family_Japan" "${cpi_family[@]}"
 OTHER=$(wc -l < "$REMAINING")
 
 mv "$REMAINING" \
-    "$OUTPUT/Other_Mail_Japan[${OTHER}].txt"
+    "$OUTPUT/Other_Mail[${OTHER}].txt"
 
-echo
-echo "============================================================"
-echo "                         COMPLETE"
-echo "============================================================"
-echo
-echo "Original : $TOTAL"
-echo "Other    : $OTHER"
-echo "Output   : $OUTPUT"
-echo
-echo "============================================================"
+# ============================================================
+# SUMMARY
+# ============================================================
+
+echo ""
+echo "__________________________________________________________________________________"
+printf "${LIGHTGREEN}${BOLD}Completed${NC}\n"
+echo ""
+printf "Input emails : %s\n" "$TOTAL"
+printf "Other emails : %s\n" "$OTHER"
+printf "Output       : %s\n" "$OUTPUT"
+echo "__________________________________________________________________________________"
+echo ""
+
+printf "${LIGHTCYAN}Generated files:${NC}\n"
+
+find "$OUTPUT" \
+    -maxdepth 1 \
+    -type f \
+    -printf "  %f\n" |
+sort
+
+echo ""
+printf "${GREEN}${BOLD}Done.${NC}\n"
