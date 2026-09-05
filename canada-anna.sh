@@ -472,22 +472,10 @@ printf "${BLUE}[+] Extracting email addresses...${NC}\n"
 awk '
 {
     s = tolower($0)
-
-    while (
-        match(
-            s,
-            /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/
-        )
-    ) {
-
+    while (match(s, /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/)) {
         email = substr(s, RSTART, RLENGTH)
-
         print email
-
-        s = substr(
-            s,
-            RSTART + RLENGTH
-        )
+        s = substr(s, RSTART + RLENGTH)
     }
 }
 ' "$INPUT" |
@@ -504,6 +492,7 @@ echo ""
 # ============================================================
 
 declare -A FAMILY_REGEX
+FAMILY_ORDER=()
 
 
 add_family(){
@@ -530,6 +519,7 @@ add_family(){
     done
 
     FAMILY_REGEX["$name"]="$regex"
+    FAMILY_ORDER+=("$name")
 }
 
 
@@ -643,68 +633,76 @@ mkdir -p "$OUTPUT"
 
 printf "${BLUE}[+] Classifying emails...${NC}\n"
 
-declare -A FILES
-declare -A COUNTS
+OTHER_TMP="$TMP_DIR/other.tmp"
+MAP_FILE="$TMP_DIR/families.map"
+COUNTS_FILE="$TMP_DIR/counts.tsv"
 
-for family in "${!FAMILY_REGEX[@]}"; do
+: > "$OTHER_TMP"
+: > "$MAP_FILE"
 
-    file="$OUTPUT/${family}.tmp"
-
-    : > "$file"
-
-    FILES["$family"]="$file"
-    COUNTS["$family"]=0
-
+# Preserve registration order (bash associative-array key order is
+# unspecified) and hand it to a single awk process instead of doing
+# an O(emails * families) regex match inside interpreted bash.
+for family in "${FAMILY_ORDER[@]}"; do
+    printf '%s\t%s\n' "$family" "${FAMILY_REGEX[$family]}" >> "$MAP_FILE"
 done
 
 
-OTHER_TMP="$TMP_DIR/other.tmp"
-: > "$OTHER_TMP"
-
-
 # ============================================================
-# PROCESS EMAILS
+# PROCESS EMAILS (single fast awk pass)
 # ============================================================
 
-while IFS= read -r email; do
+awk -v mapfile="$MAP_FILE" -v outdir="$OUTPUT" -v otherfile="$OTHER_TMP" '
+BEGIN {
+    n = 0
+    while ((getline line < mapfile) > 0) {
+        split(line, parts, "\t")
+        n++
+        fam[n] = parts[1]
+        pat[n] = parts[2]
+        cnt[n] = 0
+    }
+    close(mapfile)
+}
+{
+    email = $0
+    if (email == "") next
 
-    [[ -z "$email" ]] && continue
+    at = index(email, "@")
+    domain = (at > 0) ? substr(email, at + 1) : email
 
-    domain="${email#*@}"
-
-    matched=0
-
-    for family in "${!FAMILY_REGEX[@]}"; do
-
-        regex="${FAMILY_REGEX[$family]}"
-
-        if [[ "$domain" =~ $regex ]]; then
-
-            printf '%s\n' "$email" >> "${FILES[$family]}"
-
-            COUNTS["$family"]=$(( COUNTS["$family"] + 1 ))
-
-            matched=1
+    matched = 0
+    for (i = 1; i <= n; i++) {
+        if (pat[i] != "" && domain ~ pat[i]) {
+            outfile = outdir "/" fam[i] ".tmp"
+            print email >> outfile
+            cnt[i]++
+            matched = 1
             break
-        fi
+        }
+    }
 
-    done
-
-    if (( matched == 0 )); then
-        printf '%s\n' "$email" >> "$OTHER_TMP"
-    fi
-
-done < "$EMAILS"
+    if (!matched) {
+        print email >> otherfile
+    }
+}
+END {
+    for (i = 1; i <= n; i++) {
+        print fam[i] "\t" cnt[i]
+    }
+}
+' "$EMAILS" > "$COUNTS_FILE"
 
 
 # ============================================================
 # RENAME OUTPUT FILES
 # ============================================================
 
-for family in "${!FILES[@]}"; do
+while IFS=$'\t' read -r family count; do
 
-    file="${FILES[$family]}"
-    count="${COUNTS[$family]}"
+    [[ -z "$family" ]] && continue
+
+    file="$OUTPUT/${family}.tmp"
 
     if (( count > 0 )); then
 
@@ -720,7 +718,7 @@ for family in "${!FILES[@]}"; do
 
     fi
 
-done
+done < "$COUNTS_FILE"
 
 
 # ============================================================
