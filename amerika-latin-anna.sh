@@ -1,136 +1,36 @@
 #!/usr/bin/env bash
-
 set -u
 export LC_ALL=C
 
-# ============================================================
-# COLORS
-# ============================================================
-
 BOLD='\e[1m'
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-
-LIGHTRED='\033[0;91m'
 LIGHTGREEN='\033[0;92m'
 LIGHTCYAN='\033[0;96m'
-
-BACKGREEN='\033[0;42m'
-BACKBLUE='\033[0;44m'
-
 NC='\033[0m'
 
-
-# ============================================================
-# HEADER
-# ============================================================
-
-header(){
-  printf "    ${LIGHTGREEN}       ___ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ║║╔╣╚╝║║║║║║║ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ║║╚╣╔╗║╚╝║╩║║ ${NC}\n"
-  printf "    ${LIGHTGREEN}      \\===/   ║╚═╩╝╚╩══╩╩╝║ ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ╚═══════════╝ ${NC}\n"
-  printf "    ${LIGHTGREEN}       ||| ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗ ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║ ${NC}\n"
-  printf "    ${LIGHTGREEN}    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝ ${NC}\n"
+header() {
+    printf "${LIGHTGREEN}${BOLD}LATIN AMERICA EMAIL PROVIDER / ISP FILTER${NC}\n"
+    printf "${LIGHTCYAN}Country + ISP + Free Mail + Government + Education + Organization${NC}\n"
 }
 
-
-# ============================================================
-# START
-# ============================================================
-
-clear
+clear 2>/dev/null || true
 header
-
-echo ""
-echo "__________________________________________________________________________________"
-echo ""
-echo "Americas Mail Domain Family Filter"
-echo "Coded By : AnnaQitty ( chua )"
-echo "__________________________________________________________________________________"
-echo ""
-
-read -rp "[+] Input file  : " INPUT
-read -rp "[+] Output dir  : " OUTPUT
+echo "=========================================================================="
+read -rp "[+] Input file : " INPUT
+read -rp "[+] Output dir : " OUTPUT
 
 if [[ ! -f "$INPUT" ]]; then
-    printf "${RED}[!] Input file not found: %s${NC}\n" "$INPUT"
+    printf "${RED}[!] File not found: %s${NC}\n" "$INPUT"
     exit 1
 fi
-
 mkdir -p "$OUTPUT"
 
-TMP_DIR="${TMPDIR:-/tmp}/americas_filter_$$"
-mkdir -p "$TMP_DIR"
-
+TMP_DIR="${TMPDIR:-/tmp}/latin_america_filter_$$"
+mkdir -p "$TMP_DIR" || exit 1
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
-
-
-# ============================================================
-# COUNTRY DATABASE
-# USA EXCLUDED
-# ============================================================
-
-declare -A COUNTRY_TLDS
-
-# ---------------- NORTH AMERICA ----------------
-
-COUNTRY_TLDS[canada]="ca"
-COUNTRY_TLDS[mexico]="mx"
-
-# ---------------- CENTRAL AMERICA ----------------
-
-COUNTRY_TLDS[belize]="bz"
-COUNTRY_TLDS[costa_rica]="cr"
-COUNTRY_TLDS[el_salvador]="sv"
-COUNTRY_TLDS[guatemala]="gt"
-COUNTRY_TLDS[honduras]="hn"
-COUNTRY_TLDS[nicaragua]="ni"
-COUNTRY_TLDS[panama]="pa"
-
-# ---------------- CARIBBEAN ----------------
-
-COUNTRY_TLDS[antigua_barbuda]="ag"
-COUNTRY_TLDS[bahamas]="bs"
-COUNTRY_TLDS[barbados]="bb"
-COUNTRY_TLDS[cuba]="cu"
-COUNTRY_TLDS[dominica]="dm"
-COUNTRY_TLDS[dominican_republic]="do"
-COUNTRY_TLDS[grenada]="gd"
-COUNTRY_TLDS[haiti]="ht"
-COUNTRY_TLDS[jamaica]="jm"
-COUNTRY_TLDS[saint_kitts_nevis]="kn"
-COUNTRY_TLDS[saint_lucia]="lc"
-COUNTRY_TLDS[saint_vincent_grenadines]="vc"
-COUNTRY_TLDS[trinidad_tobago]="tt"
-
-# ---------------- SOUTH AMERICA ----------------
-
-COUNTRY_TLDS[argentina]="ar"
-COUNTRY_TLDS[bolivia]="bo"
-COUNTRY_TLDS[brazil]="br"
-COUNTRY_TLDS[chile]="cl"
-COUNTRY_TLDS[colombia]="co"
-COUNTRY_TLDS[ecuador]="ec"
-COUNTRY_TLDS[guyana]="gy"
-COUNTRY_TLDS[paraguay]="py"
-COUNTRY_TLDS[peru]="pe"
-COUNTRY_TLDS[suriname]="sr"
-COUNTRY_TLDS[uruguay]="uy"
-COUNTRY_TLDS[venezuela]="ve"
-
-
-# ============================================================
-# EXTRACT EMAILS
-# ============================================================
 
 EMAILS="$TMP_DIR/emails.txt"
 
@@ -139,421 +39,290 @@ printf "${BLUE}[+] Extracting valid email addresses...${NC}\n"
 awk '
 {
     line=tolower($0)
-
-    while (
-        match(
-            line,
-            /[[:alnum:]_.%+-]+@[[:alnum:].-]+\.[[:alpha:]][[:alpha:]]+/
-        )
-    ) {
-
+    while (match(line, /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/)) {
         email=substr(line,RSTART,RLENGTH)
-
-        if (
-            email !~ /\.\./ &&
-            email !~ /^[-_.%+]/ &&
-            email !~ /[-_.%+]@/
-        ) {
+        if (email !~ /\.\./ && email !~ /^[-_.%+]/ && email !~ /[-_.%+]@/)
             print email
-        }
-
         line=substr(line,RSTART+RLENGTH)
     }
 }
-' "$INPUT" |
-awk '!seen[$0]++' > "$EMAILS"
+' "$INPUT" | awk '!seen[$0]++' > "$EMAILS"
 
 TOTAL=$(wc -l < "$EMAILS")
+printf "${GREEN}[+] Unique emails : %s${NC}\n\n" "$TOTAL"
 
-printf "${GREEN}[+] Unique emails : %s${NC}\n" "$TOTAL"
-
-
-# ============================================================
-# MULTIPLE TLD FILTER
-# ============================================================
-
-filter_multiple_tlds(){
-
-    local FAMILY="$1"
+filter() {
+    local name="$1"
     shift
+    local tmp="$TMP_DIR/${name}.tmp"
+    local count
 
-    local TEMP="$TMP_DIR/${FAMILY}.tmp"
-    local TLD
-    local COUNT
+    : > "$tmp"
 
-    : > "$TEMP"
+    awk -v suffixes="$*" '
+    BEGIN { n=split(suffixes,a," ") }
+    {
+        at=index($0,"@")
+        if (!at) next
+        d=substr($0,at+1)
 
-    for TLD in "$@"; do
-
-        awk -v tld="$TLD" '
-        {
-            email=$0
-            at=index(email,"@")
-
-            if (at == 0)
-                next
-
-            domain=substr(email,at+1)
-
-            if (
-                domain == tld ||
-                domain ~ ("\\." tld "$")
-            ) {
-                print email
+        for (i=1;i<=n;i++) {
+            s=a[i]
+            if (d == s ||
+                (length(d) > length(s) &&
+                 substr(d,length(d)-length(s),1) == "." &&
+                 substr(d,length(d)-length(s)+1) == s)) {
+                print
+                break
             }
         }
-        ' "$EMAILS" >> "$TEMP"
+    }' "$EMAILS" | sort -u > "$tmp"
 
-    done
-
-    sort -u "$TEMP" -o "$TEMP"
-
-    if [[ -s "$TEMP" ]]; then
-
-        COUNT=$(wc -l < "$TEMP")
-
-        mv "$TEMP" \
-           "$OUTPUT/${FAMILY}[${COUNT}].txt"
-
-        printf "${GREEN}[OK] %-55s %s${NC}\n" \
-            "$FAMILY" "$COUNT"
-
+    if [[ -s "$tmp" ]]; then
+        count=$(wc -l < "$tmp")
+        mv "$tmp" "$OUTPUT/${name}[${count}].txt"
+        printf "${GREEN}[OK] %-46s %s${NC}\n" "$name" "$count"
     else
-
-        rm -f "$TEMP"
-
+        rm -f "$tmp"
     fi
 }
 
+# ==========================================================================
+# LATIN AMERICA / CARIBBEAN COUNTRY DOMAINS
+# ==========================================================================
+echo "${LIGHTCYAN}${BOLD}COUNTRY DOMAINS${NC}"
 
-# ============================================================
-# COUNTRY FILTER
-# ============================================================
+filter "Argentina_Family_LatinAmerica" ar
+filter "Bolivia_Family_LatinAmerica" bo
+filter "Brazil_Family_LatinAmerica" br
+filter "Chile_Family_LatinAmerica" cl
+filter "Colombia_Family_LatinAmerica" co
+filter "CostaRica_Family_LatinAmerica" cr
+filter "Cuba_Family_LatinAmerica" cu
+filter "DominicanRepublic_Family_LatinAmerica" do
+filter "Ecuador_Family_LatinAmerica" ec
+filter "ElSalvador_Family_LatinAmerica" sv
+filter "Guatemala_Family_LatinAmerica" gt
+filter "Haiti_Family_LatinAmerica" ht
+filter "Honduras_Family_LatinAmerica" hn
+filter "Jamaica_Family_LatinAmerica" jm
+filter "Mexico_Family_LatinAmerica" mx
+filter "Nicaragua_Family_LatinAmerica" ni
+filter "Panama_Family_LatinAmerica" pa
+filter "Paraguay_Family_LatinAmerica" py
+filter "Peru_Family_LatinAmerica" pe
+filter "PuertoRico_Family_LatinAmerica" pr
+filter "Uruguay_Family_LatinAmerica" uy
+filter "Venezuela_Family_LatinAmerica" ve
+filter "Guyana_Family_LatinAmerica" gy
+filter "Suriname_Family_LatinAmerica" sr
+filter "Belize_Family_LatinAmerica" bz
+filter "FrenchGuiana_Family_LatinAmerica" gf
 
-echo ""
-printf "${LIGHTCYAN}${BOLD}COUNTRY FAMILIES${NC}\n"
-echo "__________________________________________________________________________________"
+# ==========================================================================
+# REGIONAL GROUPS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}REGIONAL GROUPS${NC}"
 
-for COUNTRY in "${!COUNTRY_TLDS[@]}"; do
+filter "SouthAmerica_Region_LatinAmerica" ar bo br cl co ec gy py pe sr uy ve
+filter "CentralAmerica_Region_LatinAmerica" bz cr sv gt hn ni pa
+filter "Caribbean_Region_LatinAmerica" cu do ht jm pr
+filter "LatinAmerica_Region" lat
+filter "LatinAmerica_Domain" lat
 
-    TLD="${COUNTRY_TLDS[$COUNTRY]}"
+# ==========================================================================
+# GOVERNMENT / PUBLIC SECTOR
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}GOVERNMENT / PUBLIC SECTOR${NC}"
 
-    filter_multiple_tlds \
-        "${COUNTRY}_Family_Americas" \
-        "$TLD"
+filter "Argentina_Government_LatinAmerica" gov.ar
+filter "Bolivia_Government_LatinAmerica" gob.bo
+filter "Brazil_Government_LatinAmerica" gov.br
+filter "Chile_Government_LatinAmerica" gob.cl
+filter "Colombia_Government_LatinAmerica" gov.co
+filter "CostaRica_Government_LatinAmerica" go.cr
+filter "Cuba_Government_LatinAmerica" gob.cu
+filter "DominicanRepublic_Government_LatinAmerica" gob.do
+filter "Ecuador_Government_LatinAmerica" gob.ec
+filter "ElSalvador_Government_LatinAmerica" gob.sv
+filter "Guatemala_Government_LatinAmerica" gob.gt
+filter "Haiti_Government_LatinAmerica" gouv.ht
+filter "Honduras_Government_LatinAmerica" gob.hn
+filter "Jamaica_Government_LatinAmerica" gov.jm
+filter "Mexico_Government_LatinAmerica" gob.mx
+filter "Nicaragua_Government_LatinAmerica" gob.ni
+filter "Panama_Government_LatinAmerica" gob.pa
+filter "Paraguay_Government_LatinAmerica" gov.py
+filter "Peru_Government_LatinAmerica" gob.pe
+filter "PuertoRico_Government_LatinAmerica" pr.gov
+filter "Uruguay_Government_LatinAmerica" gub.uy
+filter "Venezuela_Government_LatinAmerica" gob.ve
+filter "Guyana_Government_LatinAmerica" gov.gy
+filter "Suriname_Government_LatinAmerica" gov.sr
+filter "Belize_Government_LatinAmerica" gov.bz
 
+# ==========================================================================
+# EDUCATION
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}EDUCATION${NC}"
+
+filter "Argentina_Education_LatinAmerica" edu.ar
+filter "Bolivia_Education_LatinAmerica" edu.bo
+filter "Brazil_Education_LatinAmerica" edu.br
+filter "Chile_Education_LatinAmerica" edu.cl
+filter "Colombia_Education_LatinAmerica" edu.co
+filter "CostaRica_Education_LatinAmerica" ac.cr
+filter "Cuba_Education_LatinAmerica" edu.cu
+filter "DominicanRepublic_Education_LatinAmerica" edu.do
+filter "Ecuador_Education_LatinAmerica" edu.ec
+filter "ElSalvador_Education_LatinAmerica" edu.sv
+filter "Guatemala_Education_LatinAmerica" edu.gt
+filter "Haiti_Education_LatinAmerica" edu.ht
+filter "Honduras_Education_LatinAmerica" edu.hn
+filter "Jamaica_Education_LatinAmerica" edu.jm
+filter "Mexico_Education_LatinAmerica" edu.mx
+filter "Nicaragua_Education_LatinAmerica" edu.ni
+filter "Panama_Education_LatinAmerica" ac.pa edu.pa
+filter "Paraguay_Education_LatinAmerica" edu.py
+filter "Peru_Education_LatinAmerica" edu.pe
+filter "PuertoRico_Education_LatinAmerica" upr.edu
+filter "Uruguay_Education_LatinAmerica" edu.uy
+filter "Venezuela_Education_LatinAmerica" edu.ve
+filter "Guyana_Education_LatinAmerica" edu.gy
+filter "Suriname_Education_LatinAmerica" edu.sr
+
+# ==========================================================================
+# ORGANIZATIONS / NONPROFIT
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}ORGANIZATION / NONPROFIT${NC}"
+
+filter "Argentina_Organization" org.ar
+filter "Bolivia_Organization" org.bo
+filter "Brazil_Organization" org.br
+filter "Chile_Organization" org.cl
+filter "Colombia_Organization" org.co
+filter "CostaRica_Organization" or.cr
+filter "Ecuador_Organization" org.ec
+filter "Mexico_Organization" org.mx
+filter "Peru_Organization" org.pe
+filter "Uruguay_Organization" org.uy
+filter "Venezuela_Organization" org.ve
+filter "Panama_Organization" org.pa
+filter "Paraguay_Organization" org.py
+filter "Guatemala_Organization" org.gt
+
+# ==========================================================================
+# MAJOR GLOBAL MAIL PROVIDERS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}MAJOR MAIL PROVIDERS${NC}"
+
+filter "Google_Family" gmail.com googlemail.com
+filter "Microsoft_Family" outlook.com hotmail.com live.com msn.com
+filter "Yahoo_Family" yahoo.com yahoo.com.ar yahoo.com.br yahoo.com.mx yahoo.com.co yahoo.com.pe ymail.com rocketmail.com
+filter "Apple_Family" icloud.com me.com mac.com
+filter "AOL_Family" aol.com
+filter "Proton_Family" proton.me protonmail.com
+filter "Tuta_Family" tuta.com tutanota.com
+filter "GMX_Family" gmx.com gmx.de gmx.at gmx.ch
+filter "Mailcom_Family" mail.com email.com
+filter "Yandex_Family" yandex.com yandex.ru
+filter "Zoho_Family" zoho.com zohomail.com
+
+# ==========================================================================
+# LATIN AMERICAN / REGIONAL ISP & MAIL PROVIDERS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}LATIN AMERICAN ISP / MAIL PROVIDERS${NC}"
+
+# Argentina
+filter "Argentina_Providers" fibertel.com.ar personal.com.ar speedy.com.ar arnet.com.ar ciudad.com.ar yahoo.com.ar
+
+# Brazil
+filter "Brazil_Providers" uol.com.br bol.com.br terra.com.br ig.com.br oi.com.br globo.com globomail.com r7.com zipmail.com.br
+
+# Chile
+filter "Chile_Providers" entel.cl vtr.net movistar.cl mi.cl gmail.com
+
+# Colombia
+filter "Colombia_Providers" une.net.co etb.net.co claro.com.co tigo.com.co movistar.com.co
+
+# Mexico
+filter "Mexico_Providers" prodigy.net.mx telmexmail.com infinitum.com.mx axtel.net izzi.mx totalplay.com.mx megacable.com.mx
+
+# Peru
+filter "Peru_Providers" speedy.com.pe terra.com.pe movistar.com.pe claro.com.pe
+
+# Ecuador
+filter "Ecuador_Providers" cnt.gob.ec puntonet.ec interactive.net.ec
+
+# Venezuela
+filter "Venezuela_Providers" cantv.net movilnet.com.ve netuno.net
+
+# Central America
+filter "CentralAmerica_Providers" cablecolor.hn tigo.com.gt tigo.com.hn tigo.com.sv cabletica.net kolbi.cr
+
+# Caribbean
+filter "Caribbean_Providers" codetel.net.do claro.com.do orange.net.do windstream.net
+
+# ==========================================================================
+# COUNTRY-SPECIFIC SECOND-LEVEL DOMAIN GROUPS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}COUNTRY DOMAIN GROUPS${NC}"
+
+filter "Argentina_Domains" com.ar net.ar org.ar gov.ar edu.ar mil.ar
+filter "Bolivia_Domains" com.bo net.bo org.bo gob.bo edu.bo
+filter "Brazil_Domains" com.br net.br org.br gov.br edu.br mil.br
+filter "Chile_Domains" cl com.cl net.cl org.cl gob.cl gov.cl edu.cl
+filter "Colombia_Domains" com.co net.co org.co gov.co edu.co
+filter "CostaRica_Domains" co.cr or.cr ac.cr go.cr
+filter "DominicanRepublic_Domains" com.do net.do org.do gov.do edu.do
+filter "Ecuador_Domains" com.ec net.ec org.ec gob.ec edu.ec
+filter "Guatemala_Domains" com.gt net.gt org.gt gob.gt edu.gt
+filter "Honduras_Domains" com.hn net.hn org.hn gob.hn edu.hn
+filter "Mexico_Domains" com.mx net.mx org.mx gob.mx edu.mx
+filter "Nicaragua_Domains" com.ni net.ni org.ni gob.ni edu.ni
+filter "Panama_Domains" com.pa net.pa org.pa gob.pa edu.pa
+filter "Paraguay_Domains" com.py net.py org.py gov.py edu.py
+filter "Peru_Domains" com.pe net.pe org.pe gob.pe edu.pe
+filter "Uruguay_Domains" com.uy net.uy org.uy gub.uy edu.uy
+filter "Venezuela_Domains" com.ve net.ve org.ve gob.ve edu.ve
+
+# ==========================================================================
+# OTHER
+# ==========================================================================
+CLASSIFIED="$TMP_DIR/classified.txt"
+: > "$CLASSIFIED"
+
+for f in "$OUTPUT"/*.txt; do
+    [[ -f "$f" ]] && cat "$f" >> "$CLASSIFIED"
 done
 
+sort -u "$CLASSIFIED" -o "$CLASSIFIED"
 
-# ============================================================
-# NORTH AMERICA
-# ============================================================
+OTHER="$TMP_DIR/other.txt"
+awk 'NR==FNR { seen[$0]=1; next } !seen[$0]' "$CLASSIFIED" "$EMAILS" |
+    sort -u > "$OTHER"
 
-echo ""
-printf "${LIGHTCYAN}${BOLD}NORTH AMERICA${NC}\n"
-echo "__________________________________________________________________________________"
+OTHER_COUNT=$(wc -l < "$OTHER")
+mv "$OTHER" "$OUTPUT/Other_LatinAmerica[${OTHER_COUNT}].txt"
 
-filter_multiple_tlds \
-    "NorthAmerica_Region_Americas" \
-    ca mx
+printf "${YELLOW}[OTHER] %-46s %s${NC}\n" "Other_LatinAmerica" "$OTHER_COUNT"
 
-
-# ============================================================
-# CENTRAL AMERICA
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}CENTRAL AMERICA${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "CentralAmerica_Region_Americas" \
-    bz cr sv gt hn ni pa
-
-
-# ============================================================
-# CARIBBEAN
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}CARIBBEAN${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "Caribbean_Region_Americas" \
-    ag bs bb cu dm do gd ht jm kn lc vc tt
-
-
-# ============================================================
-# SOUTH AMERICA
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}SOUTH AMERICA${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "SouthAmerica_Region_Americas" \
-    ar bo br cl co ec gy py pe sr uy ve
-
-
-# ============================================================
-# ALL AMERICAS EXCEPT USA
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}ALL AMERICAS EXCEPT USA${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "Americas_Region_Except_USA" \
-    ca mx \
-    bz cr sv gt hn ni pa \
-    ag bs bb cu dm do gd ht jm kn lc vc tt \
-    ar bo br cl co ec gy py pe sr uy ve
-
-
-# ============================================================
-# EDUCATION
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}EDUCATION / ACADEMIC${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "Canada_Education_Americas" \
-    edu.ca
-
-filter_multiple_tlds \
-    "Mexico_Education_Americas" \
-    edu.mx
-
-filter_multiple_tlds \
-    "Argentina_Education_Americas" \
-    edu.ar
-
-filter_multiple_tlds \
-    "Brazil_Education_Americas" \
-    edu.br
-
-filter_multiple_tlds \
-    "Chile_Education_Americas" \
-    edu.cl
-
-filter_multiple_tlds \
-    "Colombia_Education_Americas" \
-    edu.co
-
-filter_multiple_tlds \
-    "Ecuador_Education_Americas" \
-    edu.ec
-
-filter_multiple_tlds \
-    "Peru_Education_Americas" \
-    edu.pe
-
-filter_multiple_tlds \
-    "Uruguay_Education_Americas" \
-    edu.uy
-
-filter_multiple_tlds \
-    "Bolivia_Education_Americas" \
-    edu.bo
-
-filter_multiple_tlds \
-    "Paraguay_Education_Americas" \
-    edu.py
-
-filter_multiple_tlds \
-    "CostaRica_Education_Americas" \
-    ac.cr
-
-filter_multiple_tlds \
-    "Panama_Education_Americas" \
-    ac.pa
-
-filter_multiple_tlds \
-    "DominicanRepublic_Education_Americas" \
-    edu.do
-
-filter_multiple_tlds \
-    "Guatemala_Education_Americas" \
-    edu.gt
-
-
-# ============================================================
-# ALL EDUCATION AMERICAS
-# ============================================================
-
-filter_multiple_tlds \
-    "Education_Americas" \
-    edu.ca \
-    edu.mx \
-    edu.ar \
-    edu.br \
-    edu.cl \
-    edu.co \
-    edu.ec \
-    edu.pe \
-    edu.uy \
-    edu.bo \
-    edu.py \
-    ac.cr \
-    ac.pa \
-    edu.do \
-    edu.gt
-
-
-# ============================================================
-# GOVERNMENT
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}GOVERNMENT${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "Canada_Government_Americas" \
-    gc.ca
-
-filter_multiple_tlds \
-    "Mexico_Government_Americas" \
-    gob.mx
-
-filter_multiple_tlds \
-    "Argentina_Government_Americas" \
-    gob.ar
-
-filter_multiple_tlds \
-    "Brazil_Government_Americas" \
-    gov.br
-
-filter_multiple_tlds \
-    "Chile_Government_Americas" \
-    gob.cl
-
-filter_multiple_tlds \
-    "Colombia_Government_Americas" \
-    gov.co
-
-filter_multiple_tlds \
-    "Ecuador_Government_Americas" \
-    gob.ec
-
-filter_multiple_tlds \
-    "Peru_Government_Americas" \
-    gob.pe
-
-filter_multiple_tlds \
-    "Uruguay_Government_Americas" \
-    gub.uy
-
-filter_multiple_tlds \
-    "Bolivia_Government_Americas" \
-    gob.bo
-
-filter_multiple_tlds \
-    "Paraguay_Government_Americas" \
-    gov.py
-
-filter_multiple_tlds \
-    "CostaRica_Government_Americas" \
-    go.cr
-
-filter_multiple_tlds \
-    "Panama_Government_Americas" \
-    gob.pa
-
-filter_multiple_tlds \
-    "DominicanRepublic_Government_Americas" \
-    gob.do
-
-
-# ============================================================
-# ALL GOVERNMENT AMERICAS
-# ============================================================
-
-filter_multiple_tlds \
-    "Government_Americas" \
-    gc.ca \
-    gob.mx \
-    gob.ar \
-    gov.br \
-    gob.cl \
-    gov.co \
-    gob.ec \
-    gob.pe \
-    gub.uy \
-    gob.bo \
-    gov.py \
-    go.cr \
-    gob.pa \
-    gob.do
-
-
-# ============================================================
-# BUSINESS DOMAINS
-# ============================================================
-
-echo ""
-printf "${LIGHTCYAN}${BOLD}BUSINESS / ORGANIZATION / NETWORK${NC}\n"
-echo "__________________________________________________________________________________"
-
-filter_multiple_tlds \
-    "Business_Americas" \
-    com.ar \
-    com.br \
-    com.cl \
-    com.co \
-    com.mx \
-    com.pe \
-    com.uy
-
-filter_multiple_tlds \
-    "Organization_Americas" \
-    org.ar \
-    org.br \
-    org.cl \
-    org.co \
-    org.mx \
-    org.pe \
-    org.uy
-
-filter_multiple_tlds \
-    "Network_Americas" \
-    net.ar \
-    net.br \
-    net.cl \
-    net.co \
-    net.mx \
-    net.pe
-
-
-# ============================================================
-# SUMMARY
-# ============================================================
-
-echo ""
-echo "__________________________________________________________________________________"
-echo ""
+echo
+echo "=========================================================================="
 printf "${LIGHTGREEN}${BOLD}COMPLETE${NC}\n"
-echo "__________________________________________________________________________________"
-
+echo "=========================================================================="
 printf "Input file   : %s\n" "$INPUT"
 printf "Total emails : %s\n" "$TOTAL"
 printf "Output dir   : %s\n" "$OUTPUT"
-
-echo ""
+echo
 printf "${LIGHTCYAN}Generated files:${NC}\n"
-
-find "$OUTPUT" \
-    -maxdepth 1 \
-    -type f \
-    -printf "  %f\n" |
-sort
-
-echo ""
-echo "__________________________________________________________________________________"
+find "$OUTPUT" -maxdepth 1 -type f -printf "  %f\n" 2>/dev/null | sort
+echo
 printf "${GREEN}${BOLD}Done.${NC}\n"
-echo "__________________________________________________________________________________"
