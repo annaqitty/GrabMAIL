@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-
 set -u
 export LC_ALL=C
-
-# ============================================================
-# COLORS
-# ============================================================
 
 BOLD='\e[1m'
 RED='\033[0;31m'
@@ -16,30 +11,14 @@ LIGHTGREEN='\033[0;92m'
 LIGHTCYAN='\033[0;96m'
 NC='\033[0m'
 
-
-# ============================================================
-# HEADER
-# ============================================================
-
 header() {
-    printf "    ${LIGHTGREEN}       ___ ${NC}\n"
-    printf "    ${LIGHTGREEN}     o|* *|o  EUROPE EMAIL FILTER ${NC}\n"
-    printf "    ${LIGHTGREEN}     o|* *|o  EXCLUDING UK / FR / IT / DE ${NC}\n"
-    printf "    ${LIGHTGREEN}      \\===/ ${NC}\n"
-    printf "    ${LIGHTGREEN}       ||| ${NC}\n"
-    printf "    ${LIGHTGREEN}       ||| ${NC}\n"
-    printf "    ${LIGHTGREEN}    ___|||___ ${NC}\n"
+    printf "${LIGHTGREEN}${BOLD}EUROPE EMAIL PROVIDER / ISP FILTER${NC}\n"
+    printf "${LIGHTCYAN}Country + ISP + Free Mail + Government + Education + Organization${NC}\n"
 }
 
-clear
+clear 2>/dev/null || true
 header
-
-echo ""
 echo "=========================================================================="
-printf "${LIGHTCYAN}${BOLD}EUROPE EMAIL FAMILY FILTER${NC}\n"
-echo "=========================================================================="
-echo ""
-
 read -rp "[+] Input file : " INPUT
 read -rp "[+] Output dir : " OUTPUT
 
@@ -47,348 +26,274 @@ if [[ ! -f "$INPUT" ]]; then
     printf "${RED}[!] File not found: %s${NC}\n" "$INPUT"
     exit 1
 fi
-
 mkdir -p "$OUTPUT"
 
-TMP_DIR="${TMPDIR:-/tmp}/europe_mail_filter_$$"
-mkdir -p "$TMP_DIR"
-
+TMP_DIR="${TMPDIR:-/tmp}/europe_filter_$$"
+mkdir -p "$TMP_DIR" || exit 1
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
-
-
-# ============================================================
-# INTERNATIONAL WEBMAIL
-# ============================================================
-
-microsoft_family=(
-    hotmail
-    live
-    outlook
-    msn
-    windowslive
-)
-
-google_family=(
-    gmail
-    googlemail
-)
-
-yahoo_family=(
-    yahoo
-    ymail
-    rocketmail
-)
-
-apple_family=(
-    icloud
-    me
-    mac
-)
-
-aol_family=(
-    aol
-)
-
-proton_family=(
-    proton
-    protonmail
-)
-
-tuta_family=(
-    tuta
-    tutanota
-)
-
-
-# ============================================================
-# EUROPEAN COUNTRY TLDs
-# ============================================================
-
-austria_family=( at )
-belgium_family=( be )
-bulgaria_family=( bg )
-croatia_family=( hr )
-cyprus_family=( cy )
-czechia_family=( cz )
-denmark_family=( dk )
-estonia_family=( ee )
-finland_family=( fi )
-greece_family=( gr )
-hungary_family=( hu )
-iceland_family=( is )
-ireland_family=( ie )
-latvia_family=( lv )
-lithuania_family=( lt )
-luxembourg_family=( lu )
-malta_family=( mt )
-moldova_family=( md )
-montenegro_family=( me )
-netherlands_family=( nl )
-northmacedonia_family=( mk )
-norway_family=( no )
-poland_family=( pl )
-portugal_family=( pt )
-romania_family=( ro )
-serbia_family=( rs )
-slovakia_family=( sk )
-slovenia_family=( si )
-spain_family=( es )
-sweden_family=( se )
-switzerland_family=( ch )
-ukraine_family=( ua )
-belarus_family=( by )
-bosnia_family=( ba )
-kosovo_family=( xk )
-liechtenstein_family=( li )
-monaco_family=( mc )
-sanmarino_family=( sm )
-andorra_family=( ad )
-vatican_family=( va )
-
-
-# ============================================================
-# EUROPEAN SUPRANATIONAL / GENERIC DOMAINS
-# ============================================================
-
-eu_family=( eu )
-
-org_family=( org )
-
-net_family=( net )
-
-
-# ============================================================
-# ORGANIZATION CATEGORIES
-# ============================================================
-
-education_family=(
-    edu
-    ac
-    university
-    uni
-    college
-)
-
-government_family=(
-    gov
-    government
-    minister
-    ministry
-)
-
-business_family=(
-    company
-    business
-    ltd
-    limited
-    plc
-    sa
-    srl
-    ag
-    gmbh
-)
-
-
-# ============================================================
-# EXTRACT EMAILS
-# ============================================================
 
 EMAILS="$TMP_DIR/emails.txt"
 
-printf "${BLUE}[+] Extracting email addresses...${NC}\n"
+printf "${BLUE}[+] Extracting valid email addresses...${NC}\n"
 
 awk '
 {
-    text = tolower($0)
-
-    while (
-        match(
-            text,
-            /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/
-        )
-    ) {
-        print substr(text, RSTART, RLENGTH)
-        text = substr(text, RSTART + RLENGTH)
+    line=tolower($0)
+    while (match(line, /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/)) {
+        email=substr(line,RSTART,RLENGTH)
+        if (email !~ /\.\./ && email !~ /^[-_.%+]/ && email !~ /[-_.%+]@/)
+            print email
+        line=substr(line,RSTART+RLENGTH)
     }
 }
-' "$INPUT" |
-awk '!seen[$0]++' > "$EMAILS"
+' "$INPUT" | awk '!seen[$0]++' > "$EMAILS"
 
 TOTAL=$(wc -l < "$EMAILS")
-
 printf "${GREEN}[+] Unique emails : %s${NC}\n\n" "$TOTAL"
 
-
-# ============================================================
-# EXACT DOMAIN FAMILY FILTER
-# ============================================================
-
-filter_family() {
-
-    local NAME="$1"
+filter() {
+    local name="$1"
     shift
+    local tmp="$TMP_DIR/${name}.tmp"
+    local count
 
-    local TMP="$TMP_DIR/${NAME}.txt"
-    local EMAIL
-    local DOMAIN
-    local ITEM
-    local COUNT
+    : > "$tmp"
 
-    : > "$TMP"
+    awk -v suffixes="$*" '
+    BEGIN { n=split(suffixes,a," ") }
+    {
+        at=index($0,"@")
+        if (!at) next
+        d=substr($0,at+1)
 
-    while IFS= read -r EMAIL; do
-
-        [[ -z "$EMAIL" ]] && continue
-
-        DOMAIN="${EMAIL#*@}"
-
-        for ITEM in "$@"; do
-
-            if [[ "$DOMAIN" == "$ITEM" ||
-                  "$DOMAIN" == *".$ITEM" ]]; then
-
-                printf '%s\n' "$EMAIL" >> "$TMP"
+        for (i=1;i<=n;i++) {
+            s=a[i]
+            if (d == s ||
+                (length(d) > length(s) &&
+                 substr(d,length(d)-length(s),1) == "." &&
+                 substr(d,length(d)-length(s)+1) == s)) {
+                print
                 break
+            }
+        }
+    }' "$EMAILS" | sort -u > "$tmp"
 
-            fi
-
-        done
-
-    done < "$EMAILS"
-
-    if [[ -s "$TMP" ]]; then
-
-        sort -u "$TMP" > "${TMP}.sorted"
-
-        COUNT=$(wc -l < "${TMP}.sorted")
-
-        mv "${TMP}.sorted" \
-            "$OUTPUT/${NAME}[${COUNT}].txt"
-
-        printf "${GREEN}[OK] %-52s %s${NC}\n" \
-            "$NAME" "$COUNT"
-
+    if [[ -s "$tmp" ]]; then
+        count=$(wc -l < "$tmp")
+        mv "$tmp" "$OUTPUT/${name}[${count}].txt"
+        printf "${GREEN}[OK] %-46s %s${NC}\n" "$name" "$count"
     else
-        rm -f "$TMP"
+        rm -f "$tmp"
     fi
 }
 
+# ==========================================================================
+# EUROPE COUNTRY DOMAINS
+# ==========================================================================
+echo "${LIGHTCYAN}${BOLD}COUNTRY DOMAINS${NC}"
 
-# ============================================================
-# INTERNATIONAL PROVIDERS
-# ============================================================
+filter "UnitedKingdom_Family_Europe" uk co.uk org.uk me.uk
+filter "Germany_Family_Europe" de
+filter "France_Family_Europe" fr
+filter "Italy_Family_Europe" it
+filter "Spain_Family_Europe" es
+filter "Netherlands_Family_Europe" nl
+filter "Poland_Family_Europe" pl
+filter "Switzerland_Family_Europe" ch
+filter "Austria_Family_Europe" at
+filter "Belgium_Family_Europe" be
+filter "Sweden_Family_Europe" se
+filter "Norway_Family_Europe" no
+filter "Denmark_Family_Europe" dk
+filter "Finland_Family_Europe" fi
+filter "Ireland_Family_Europe" ie
+filter "Portugal_Family_Europe" pt
+filter "Greece_Family_Europe" gr
+filter "Czechia_Family_Europe" cz
+filter "Romania_Family_Europe" ro
+filter "Hungary_Family_Europe" hu
+filter "Slovakia_Family_Europe" sk
+filter "Ukraine_Family_Europe" ua
+filter "Estonia_Family_Europe" ee
+filter "Latvia_Family_Europe" lv
+filter "Lithuania_Family_Europe" lt
+filter "Croatia_Family_Europe" hr
+filter "Bulgaria_Family_Europe" bg
+filter "Slovenia_Family_Europe" si
+filter "Serbia_Family_Europe" rs
+filter "Iceland_Family_Europe" is
+filter "Luxembourg_Family_Europe" lu
 
-filter_family "Microsoft_Family_Europe" "${microsoft_family[@]}"
-filter_family "Google_Family_Europe" "${google_family[@]}"
-filter_family "Yahoo_Family_Europe" "${yahoo_family[@]}"
-filter_family "Apple_Family_Europe" "${apple_family[@]}"
-filter_family "AOL_Family_Europe" "${aol_family[@]}"
-filter_family "Proton_Family_Europe" "${proton_family[@]}"
-filter_family "Tuta_Family_Europe" "${tuta_family[@]}"
+# ==========================================================================
+# REGIONAL GROUPS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}REGIONAL GROUPS${NC}"
 
+filter "EuropeanUnion_Domain" eu
+filter "WesternEurope_Region" fr de nl be lu ie uk
+filter "SouthernEurope_Region" es it pt gr
+filter "NorthernEurope_Region" se no dk fi is
+filter "CentralEurope_Region" at ch cz hu pl sk
+filter "EasternEurope_Region" ro bg hr si rs ua ee lv lt
 
-# ============================================================
-# COUNTRY FILTERS
-# ============================================================
+# ==========================================================================
+# GOVERNMENT / PUBLIC SECTOR
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}GOVERNMENT / PUBLIC SECTOR${NC}"
 
-filter_family "Austria_Family_Europe" "${austria_family[@]}"
-filter_family "Belgium_Family_Europe" "${belgium_family[@]}"
-filter_family "Bulgaria_Family_Europe" "${bulgaria_family[@]}"
-filter_family "Croatia_Family_Europe" "${croatia_family[@]}"
-filter_family "Cyprus_Family_Europe" "${cyprus_family[@]}"
-filter_family "Czechia_Family_Europe" "${czechia_family[@]}"
-filter_family "Denmark_Family_Europe" "${denmark_family[@]}"
-filter_family "Estonia_Family_Europe" "${estonia_family[@]}"
-filter_family "Finland_Family_Europe" "${finland_family[@]}"
-filter_family "Greece_Family_Europe" "${greece_family[@]}"
-filter_family "Hungary_Family_Europe" "${hungary_family[@]}"
-filter_family "Iceland_Family_Europe" "${iceland_family[@]}"
-filter_family "Ireland_Family_Europe" "${ireland_family[@]}"
-filter_family "Latvia_Family_Europe" "${latvia_family[@]}"
-filter_family "Lithuania_Family_Europe" "${lithuania_family[@]}"
-filter_family "Luxembourg_Family_Europe" "${luxembourg_family[@]}"
-filter_family "Malta_Family_Europe" "${malta_family[@]}"
-filter_family "Moldova_Family_Europe" "${moldova_family[@]}"
-filter_family "Montenegro_Family_Europe" "${montenegro_family[@]}"
-filter_family "Netherlands_Family_Europe" "${netherlands_family[@]}"
-filter_family "NorthMacedonia_Family_Europe" "${northmacedonia_family[@]}"
-filter_family "Norway_Family_Europe" "${norway_family[@]}"
-filter_family "Poland_Family_Europe" "${poland_family[@]}"
-filter_family "Portugal_Family_Europe" "${portugal_family[@]}"
-filter_family "Romania_Family_Europe" "${romania_family[@]}"
-filter_family "Serbia_Family_Europe" "${serbia_family[@]}"
-filter_family "Slovakia_Family_Europe" "${slovakia_family[@]}"
-filter_family "Slovenia_Family_Europe" "${slovenia_family[@]}"
-filter_family "Spain_Family_Europe" "${spain_family[@]}"
-filter_family "Sweden_Family_Europe" "${sweden_family[@]}"
-filter_family "Switzerland_Family_Europe" "${switzerland_family[@]}"
-filter_family "Ukraine_Family_Europe" "${ukraine_family[@]}"
-filter_family "Belarus_Family_Europe" "${belarus_family[@]}"
-filter_family "Bosnia_Family_Europe" "${bosnia_family[@]}"
-filter_family "Kosovo_Family_Europe" "${kosovo_family[@]}"
-filter_family "Liechtenstein_Family_Europe" "${liechtenstein_family[@]}"
-filter_family "Monaco_Family_Europe" "${monaco_family[@]}"
-filter_family "SanMarino_Family_Europe" "${sanmarino_family[@]}"
-filter_family "Andorra_Family_Europe" "${andorra_family[@]}"
-filter_family "Vatican_Family_Europe" "${vatican_family[@]}"
+filter "UnitedKingdom_Government_Europe" gov.uk
+filter "Germany_Government_Europe" bund.de
+filter "France_Government_Europe" gouv.fr
+filter "Italy_Government_Europe" gov.it
+filter "Spain_Government_Europe" gob.es
+filter "Netherlands_Government_Europe" gov.nl
+filter "Poland_Government_Europe" gov.pl
+filter "Switzerland_Government_Europe" admin.ch
+filter "Austria_Government_Europe" gv.at
+filter "Belgium_Government_Europe" fgov.be
+filter "Ireland_Government_Europe" gov.ie
+filter "Portugal_Government_Europe" gov.pt
+filter "Greece_Government_Europe" gov.gr
+filter "Czechia_Government_Europe" gov.cz
+filter "Romania_Government_Europe" gov.ro
+filter "Hungary_Government_Europe" gov.hu
+filter "Ukraine_Government_Europe" gov.ua
 
+# ==========================================================================
+# EDUCATION
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}EDUCATION${NC}"
 
-# ============================================================
-# EUROPEAN GENERIC DOMAINS
-# ============================================================
+filter "UnitedKingdom_Education_Europe" ac.uk
+filter "Germany_Education_Europe" uni-*.de
+filter "France_Education_Europe" univ-*.fr
+filter "Italy_Education_Europe" edu.it
+filter "Spain_Education_Europe" edu.es
+filter "Netherlands_Education_Europe" edu.nl
+filter "Poland_Education_Europe" edu.pl
+filter "Austria_Education_Europe" ac.at
+filter "Ireland_Education_Europe" edu.ie
+filter "Portugal_Education_Europe" edu.pt
+filter "Greece_Education_Europe" edu.gr
+filter "Czechia_Education_Europe" edu.cz
+filter "Romania_Education_Europe" edu.ro
+filter "Hungary_Education_Europe" edu.hu
+filter "Ukraine_Education_Europe" edu.ua
 
-filter_family "EU_Domain_Family_Europe" "${eu_family[@]}"
-filter_family "ORG_Domain_Family_Europe" "${org_family[@]}"
-filter_family "NET_Domain_Family_Europe" "${net_family[@]}"
+# ==========================================================================
+# ORGANIZATIONS / NONPROFIT
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}ORGANIZATION / NONPROFIT${NC}"
 
+filter "UnitedKingdom_Organization" org.uk
+filter "Germany_Organization" org.de
+filter "France_Organization" asso.fr
+filter "Italy_Organization" org.it
+filter "Spain_Organization" org.es
+filter "Poland_Organization" org.pl
+filter "Austria_Organization" org.at
+filter "Romania_Organization" org.ro
+filter "Ukraine_Organization" org.ua
 
-# ============================================================
-# ORGANIZATIONS
-# ============================================================
+# ==========================================================================
+# MAJOR GLOBAL & EUROPEAN MAIL PROVIDERS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}MAJOR MAIL PROVIDERS${NC}"
 
-filter_family "Education_Family_Europe" "${education_family[@]}"
-filter_family "Government_Family_Europe" "${government_family[@]}"
-filter_family "Business_Family_Europe" "${business_family[@]}"
+filter "Google_Family" gmail.com googlemail.com
+filter "Microsoft_Family" outlook.com hotmail.com live.com msn.com outlook.de outlook.fr outlook.es outlook.it
+filter "Yahoo_Family" yahoo.com yahoo.co.uk yahoo.de yahoo.fr yahoo.es yahoo.it yahoo.gr
+filter "Apple_Family" icloud.com me.com mac.com
+filter "Proton_Family" proton.me protonmail.com protonmail.ch
+filter "Tuta_Family" tuta.com tutanota.com tutanota.de
+filter "GMX_Family" gmx.com gmx.de gmx.at gmx.ch gmx.net gmx.fr gmx.es gmx.co.uk
+filter "WEBDE_Family" web.de
+filter "Mailcom_Family" mail.com email.com
 
+# ==========================================================================
+# EUROPEAN ISP & MAIL PROVIDERS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}EUROPEAN ISP / MAIL PROVIDERS${NC}"
 
-# ============================================================
+# Germany / Austria / Switzerland
+filter "DACH_Providers" t-online.de freenet.de arcor.de vodafone.de bluewin.ch a1.net chello.at
+
+# UK & Ireland
+filter "UK_Ireland_Providers" btinternet.com virginmedia.com sky.com talktalk.net ntlworld.com eircom.net
+
+# France
+filter "France_Providers" orange.fr wanadoo.fr free.fr sfr.fr laposte.net bouyguestelecom.fr club-internet.fr
+
+# Italy
+filter "Italy_Providers" libero.it alice.it tin.it virgilio.it tiscali.it fastwebnet.it tim.it
+
+# Spain & Portugal
+filter "Iberia_Providers" telefonica.net movistar.es ono.com terra.es meo.pt sapo.pt nos.pt
+
+# Netherlands & Belgium
+filter "Benelux_Providers" kpnmail.nl ziggo.nl home.nl hetnet.nl skynet.be telenet.be proximus.be
+
+# Nordics
+filter "Nordic_Providers" telia.com online.no steinkjer.no lyse.net mail.dk yahoo.se
+
+# Eastern Europe
+filter "EasternEurope_Providers" wp.pl onet.pl o2.pl interia.pl seznam.cz centrum.cz ukr.net i.ua freemail.hu
+
+# ==========================================================================
+# COUNTRY-SPECIFIC SECOND-LEVEL DOMAIN GROUPS
+# ==========================================================================
+echo
+echo "${LIGHTCYAN}${BOLD}COUNTRY DOMAIN GROUPS${NC}"
+
+filter "UnitedKingdom_Domains" co.uk org.uk me.uk gov.uk ac.uk net.uk
+filter "Germany_Domains" de com.de
+filter "France_Domains" fr gouv.fr asso.fr tm.fr
+filter "Italy_Domains" it gov.it edu.it
+filter "Spain_Domains" es com.es org.es gob.es edu.es
+filter "Netherlands_Domains" nl co.nl org.nl
+filter "Poland_Domains" pl com.pl net.pl org.pl gov.pl edu.pl
+filter "Austria_Domains" at co.at or.at gv.at ac.at
+filter "Switzerland_Domains" ch com.ch org.ch
+filter "Czechia_Domains" cz co.cz org.cz
+filter "Romania_Domains" ro com.ro store.ro tm.ro www.ro
+filter "Ukraine_Domains" ua com.ua net.ua org.ua gov.ua edu.ua
+
+# ==========================================================================
 # OTHER
-# ============================================================
+# ==========================================================================
+CLASSIFIED="$TMP_DIR/classified.txt"
+: > "$CLASSIFIED"
 
-OTHER="$OUTPUT/Other_Mail_Europe[${TOTAL}].txt"
+for f in "$OUTPUT"/*.txt; do
+    [[ -f "$f" ]] && cat "$f" >> "$CLASSIFIED"
+done
 
-cp "$EMAILS" "$OTHER"
+sort -u "$CLASSIFIED" -o "$CLASSIFIED"
+
+OTHER="$TMP_DIR/other.txt"
+awk 'NR==FNR { seen[$0]=1; next } !seen[$0]' "$CLASSIFIED" "$EMAILS" |
+    sort -u > "$OTHER"
 
 OTHER_COUNT=$(wc -l < "$OTHER")
+mv "$OTHER" "$OUTPUT/Other_Europe[${OTHER_COUNT}].txt"
 
-mv "$OTHER" \
-    "$OUTPUT/Other_Mail_Europe[${OTHER_COUNT}].txt"
+printf "${YELLOW}[OTHER] %-46s %s${NC}\n" "Other_Europe" "$OTHER_COUNT"
 
-
-# ============================================================
-# SUMMARY
-# ============================================================
-
-echo ""
+echo
 echo "=========================================================================="
 printf "${LIGHTGREEN}${BOLD}COMPLETE${NC}\n"
 echo "=========================================================================="
-
 printf "Input file   : %s\n" "$INPUT"
 printf "Total emails : %s\n" "$TOTAL"
-printf "Other emails : %s\n" "$OTHER_COUNT"
 printf "Output dir   : %s\n" "$OUTPUT"
-
-echo ""
+echo
 printf "${LIGHTCYAN}Generated files:${NC}\n"
-
-find "$OUTPUT" \
-    -maxdepth 1 \
-    -type f \
-    -printf "  %f\n" |
-sort
-
-echo ""
-echo "=========================================================================="
+find "$OUTPUT" -maxdepth 1 -type f -printf "  %f\n" 2>/dev/null | sort
+echo
 printf "${GREEN}${BOLD}Done.${NC}\n"
-echo "=========================================================================="
