@@ -13,7 +13,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-MAENTA='\033[0;35m'
+MAGENTA='\033[0;35m'
 
 LIGHTRED='\033[0;91m'
 LIGHTGREEN='\033[0;92m'
@@ -29,17 +29,17 @@ NC='\033[0m'
 # HEADER
 # ============================================================
 
-header(){
-  printf "    ${LIGHTGREEN}       ___ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ║║╔╣╚╝║║║║║║║ ${NC}\n"
-  printf "    ${LIGHTGREEN}     o|* *|o  ║║╚╣╔╗║╚╝║╩║║ ${NC}\n"
-  printf "    ${LIGHTGREEN}      \===/   ║╚═╩╝╚╩══╩╩╝║ ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ╚═══════════╝ ${NC}\n"
-  printf "    ${LIGHTGREEN}       ||| ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗ ${NC}\n"
-  printf "    ${LIGHTGREEN}       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║ ${NC}\n"
-  printf "    ${LIGHTGREEN}    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝ ${NC}\n"
+header() {
+    printf "    ${LIGHTGREEN}       ___ ${NC}\n"
+    printf "    ${LIGHTGREEN}     o|* *|o  ╔╦═╦╗╔╦╗╔╦═╦╗ ${NC}\n"
+    printf "    ${LIGHTGREEN}     o|* *|o  ║║╔╣╚╝║║║║║║║ ${NC}\n"
+    printf "    ${LIGHTGREEN}     o|* *|o  ║║╚╣╔╗║╚╝║╩║║ ${NC}\n"
+    printf "    ${LIGHTGREEN}      \===/   ║╚═╩╝╚╩══╩╩╝║ ${NC}\n"
+    printf "    ${LIGHTGREEN}       |||    ╚═══════════╝ ${NC}\n"
+    printf "    ${LIGHTGREEN}       ||| ${NC}\n"
+    printf "    ${LIGHTGREEN}       |||    ╔═╦═╦╦═╦╦═╗╔═╦╦══╦══╦╦╗ ${NC}\n"
+    printf "    ${LIGHTGREEN}       |||    ║╩║║║║║║║╩║║╚║╠╗╔╩╗╔╩╗║ ${NC}\n"
+    printf "    ${LIGHTGREEN}    ___|||___ ╚╩╩╩═╩╩═╩╩╝╚═╩╝╚╝ ╚╝ ╚╝ ${NC}\n"
 }
 
 
@@ -72,7 +72,10 @@ if [[ ! -f "$INPUT" ]]; then
     exit 1
 fi
 
-mkdir -p "$OUTPUT"
+mkdir -p "$OUTPUT" || {
+    printf "${RED}[!] Cannot create output directory.${NC}\n"
+    exit 1
+}
 
 
 # ============================================================
@@ -88,11 +91,11 @@ mkdir -p "$TMP_DIR" || {
 
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
+EMAILS="$TMP_DIR/emails.txt"
+
 
 # ============================================================
 # FAMILY DATABASE
-#
-# Add only domains/providers that you are authorized to process.
 # ============================================================
 
 microsoft_family=(
@@ -217,21 +220,29 @@ hughesnet_family=(
 # DOMAIN CATEGORIES
 # ============================================================
 
-edu_family=( edu )
+edu_family=(
+    edu
+)
 
-gov_family=( gov )
+gov_family=(
+    gov
+)
 
-mil_family=( mil )
+mil_family=(
+    mil
+)
 
-us_family=( us )
+us_family=(
+    us
+)
 
-org_family=( org )
+org_family=(
+    org
+)
 
 
 # ============================================================
 # STATE LABELS
-#
-# These are optional domain-name keywords, not geographic proof.
 # ============================================================
 
 alabama_family=( alabama )
@@ -290,35 +301,17 @@ wyoming_family=( wyoming )
 # EXTRACT EMAILS
 # ============================================================
 
-EMAILS="$TMP_DIR/emails.txt"
-
 printf "${BLUE}[+] Extracting email addresses...${NC}\n"
 
-awk '
-{
-    s = tolower($0)
+# Portable email extraction.
+# No multiline awk expression is used.
+grep -Eio \
+    '[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' \
+    "$INPUT" |
+    tr '[:upper:]' '[:lower:]' |
+    sort -u > "$EMAILS"
 
-    while (
-        match(
-            s,
-            /[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/
-        )
-    ) {
-
-        email = substr(s, RSTART, RLENGTH)
-
-        print email
-
-        s = substr(
-            s,
-            RSTART + RLENGTH
-        )
-    }
-}
-' "$INPUT" |
-awk '!seen[$0]++' > "$EMAILS"
-
-TOTAL=$(wc -l < "$EMAILS")
+TOTAL=$(wc -l < "$EMAILS" | tr -d ' ')
 
 printf "${GREEN}[+] Unique emails : %s${NC}\n" "$TOTAL"
 echo ""
@@ -331,8 +324,7 @@ echo ""
 declare -A FAMILY_REGEX
 
 
-add_family(){
-
+add_family() {
     local name="$1"
     shift
 
@@ -465,17 +457,14 @@ add_family "Wyoming_Family_USA" "${wyoming_family[@]}"
 # OUTPUT DIRECTORIES
 # ============================================================
 
-mkdir -p "$OUTPUT"
+mkdir -p "$OUTPUT" || {
+    printf "${RED}[!] Cannot create output directory.${NC}\n"
+    exit 1
+}
 
 
 # ============================================================
 # CLASSIFICATION
-# ============================================================
-#
-# Each email is checked once.
-# First matching family wins.
-# Unmatched addresses go to Other_Mail.
-#
 # ============================================================
 
 printf "${BLUE}[+] Classifying emails...${NC}\n"
@@ -494,8 +483,18 @@ for family in "${!FAMILY_REGEX[@]}"; do
 
 done
 
+
+# ============================================================
+# OTHER
+# ============================================================
+
 OTHER_TMP="$TMP_DIR/other.tmp"
 : > "$OTHER_TMP"
+
+
+# ============================================================
+# PROCESS EMAILS
+# ============================================================
 
 while IFS= read -r email; do
 
@@ -509,7 +508,7 @@ while IFS= read -r email; do
 
         regex="${FAMILY_REGEX[$family]}"
 
-        if [[ "$domain" =~ $regex ]]; then
+        if [[ -n "$regex" && "$domain" =~ $regex ]]; then
 
             printf '%s\n' "$email" >> "${FILES[$family]}"
 
@@ -517,6 +516,7 @@ while IFS= read -r email; do
 
             matched=1
             break
+
         fi
 
     done
@@ -555,10 +555,10 @@ done
 
 
 # ============================================================
-# OTHER
+# SAVE OTHER EMAILS
 # ============================================================
 
-OTHER_COUNT=$(wc -l < "$OTHER_TMP")
+OTHER_COUNT=$(wc -l < "$OTHER_TMP" | tr -d ' ')
 
 mv "$OTHER_TMP" \
     "$OUTPUT/Other_Mail_USA[${OTHER_COUNT}].txt"
@@ -589,7 +589,7 @@ find "$OUTPUT" \
     -maxdepth 1 \
     -type f \
     -printf "  %f\n" |
-sort
+    sort
 
 echo ""
 echo "__________________________________________________________________________________"
